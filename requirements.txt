@@ -1,4 +1,6 @@
-PySide6>=6.6
+# SAC - Grupo Lamoia (Flask + PyWebView)
+Flask>=3.0
+pywebview>=5.0
 supabase>=2.4
 psycopg2-binary>=2.9
 bcrypt>=4.1

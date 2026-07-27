@@ -72,7 +72,8 @@ def buscar_valor_unitario(codigo_cliente: int, produto_codigo: int) -> Optional[
     try:
         with conn:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                cur.execute(query, (codigo_cliente, produto_codigo))
+                # Garante conversão para inteiro (evita erro de tipo)
+                cur.execute(query, (int(codigo_cliente), int(produto_codigo)))
                 row = cur.fetchone()
                 return float(row["punit"]) if row else None
     except psycopg2.Error as exc:
