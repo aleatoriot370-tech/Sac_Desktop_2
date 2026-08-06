@@ -1,36 +1,18 @@
 """
 SAC - Grupo Lamoia
-Entry point: Flask + PyWebView.
+Entry point: Flask web application.
 
-Flask roda em thread separada; PyWebView abre a janela nativa apontando
-para http://127.0.0.1:<porta>.
+Roda como servidor web acessível no navegador.
 """
 import sys
-import socket
-import threading
 from pathlib import Path
 
 # Adiciona o diretório raiz ao path para imports locais
 sys.path.insert(0, str(Path(__file__).parent))
 
 from flask import Flask
-import webview
-
 from backend.routes import bp as api_bp
 from config import Config
-
-
-def resource_path(relative_path: str) -> Path:
-    """Resolve paths para desenvolvimento e PyInstaller (sys._MEIPASS)."""
-    base = getattr(sys, "_MEIPASS", Path(__file__).parent)
-    return Path(base) / relative_path
-
-
-def _find_free_port() -> int:
-    """Encontra uma porta TCP livre no localhost."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
 
 
 def create_app() -> Flask:
@@ -40,7 +22,7 @@ def create_app() -> Flask:
         template_folder=str(Path(__file__).parent / "frontend" / "templates"),
         static_folder=str(Path(__file__).parent / "frontend" / "static"),
     )
-    app.config["SECRET_KEY"] = "sac-grupo-lamoia-dev"
+    app.config["SECRET_KEY"] = Config.SECRET_KEY or "sac-grupo-lamoia-dev"
     app.config["JSON_AS_ASCII"] = False
 
     # Registra o blueprint da API
@@ -55,33 +37,18 @@ def create_app() -> Flask:
     return app
 
 
-def main():
-    app = create_app()
-    port = _find_free_port()
-
-    # Flask em thread separada (não bloqueia o PyWebView)
-    server_thread = threading.Thread(
-        target=lambda: app.run(
-            host="127.0.0.1",
-            port=port,
-            debug=False,
-            use_reloader=False,
-        ),
-        daemon=True,
-    )
-    server_thread.start()
-
-    # Janela nativa via PyWebView
-    window = webview.create_window(
-        title=Config.APP_NAME,
-        url=f"http://127.0.0.1:{port}",
-        width=1280,
-        height=800,
-        resizable=True,
-        min_size=(900, 600),
-    )
-    webview.start(debug=False)
-
-
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="SAC - Grupo Lamoia")
+    parser.add_argument("--host", default="0.0.0.0", help="Host (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=5000, help="Porta (default: 5000)")
+    parser.add_argument("--debug", action="store_true", help="Modo debug")
+    args = parser.parse_args()
+
+    app = create_app()
+    print(f"\n{'='*50}")
+    print(f"  SAC - Grupo Lamoia")
+    print(f"  Acesse: http://{args.host}:{args.port}")
+    print(f"{'='*50}\n")
+    app.run(host=args.host, port=args.port, debug=args.debug)

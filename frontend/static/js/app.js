@@ -451,6 +451,8 @@ async function renderChamadoAberturaPF(el) {
                     <div class="form-group"><label>Estado*</label><input name="estado" required></div>
                     <div class="form-group"><label>Marca*</label><select name="marca">${opcoes.marcas.map(m => `<option>${m}</option>`).join('')}</select></div>
                     <div class="form-group"><label>Nome do Produto*</label><input name="nome_produto" required></div>
+                    <div class="form-group"><label>Quantidade*</label><input name="quantidade" type="number" min="1" required></div>
+                    <div class="form-group"><label>Validade*</label><input name="validade" type="date" required></div>
                     <div class="form-group"><label>Lote*</label><input name="lote" required></div>
                     <div class="form-group"><label>Problema apresentado*</label><select name="problema">${opcoes.problemas.map(p => `<option>${p}</option>`).join('')}</select></div>
                     <div class="form-group"><label>Local de compra*</label><input name="local" required></div>
@@ -984,7 +986,7 @@ async function openModalFichaPF(osId) {
         <div class="modal-body">
             <p class="subtitulo">OS ${d.os_id} • aberto por ${esc(d.status_novo)}</p>
             <table class="info-table">
-                ${[['Nome',ch.nome],['E-mail',ch.email],['CPF',ch.cpf],['Celular',ch.celular],['Motivo',ch.motivo],['Cidade',ch.cidade],['Estado',ch.estado],['Marca',ch.marca],['Nome do Produto',ch.nome_produto],['Lote',ch.lote],['Problema',ch.problema],['Local de compra',ch.local],['Análise',ch.Analise],['Resolução e Resposta',ch.Resolucao_Resposta]].map(([l,v]) => `<tr><td>${l}</td><td>${esc(v||'-')}</td></tr>`).join('')}
+                ${[['Nome',ch.nome],['E-mail',ch.email],['CPF',ch.cpf],['Celular',ch.celular],['Motivo',ch.motivo],['Cidade',ch.cidade],['Estado',ch.estado],['Marca',ch.marca],['Nome do Produto',ch.nome_produto],['Quantidade',ch.quantidade],['Validade',ch.validade],['Lote',ch.lote],['Problema',ch.problema],['Local de compra',ch.local],['Análise',ch.Analise],['Resolução e Resposta',ch.Resolucao_Resposta]].map(([l,v]) => `<tr><td>${l}</td><td>${esc(v||'-')}</td></tr>`).join('')}
             </table>
             <p class="subtitulo">Decisão Qualidade: ${esc(d.decisao_qualidade)}</p>
             ${renderMidiasHTML(d.midias)}
@@ -1009,7 +1011,7 @@ async function openFichaPJQualidade(osId) {
         <div class="modal-body">
             <p class="subtitulo">OS ${d.os_id} • aberto por ${esc(d.status_novo)}</p>
             <table class="info-table">
-                ${[['Nome',ch.Nome],['Código do Cliente',osRow.Codigo],['Razão',ch.razao],['Motivo',ch.Motivo]].map(([l,v]) => `<tr><td>${l}</td><td>${esc(v||'-')}</td></tr>`).join('')}
+                ${[['Nome',ch.Nome],['Celular',ch.Celular],['Código do Cliente',osRow.Codigo],['Razão',ch.razao],['CPF/CNPJ',ch.cnpj_cpf],['Motivo',ch.Motivo]].map(([l,v]) => `<tr><td>${l}</td><td>${esc(v||'-')}</td></tr>`).join('')}
             </table>
             <div class="section-title">Produto</div>
             <div class="tabela-container"><table><thead><tr><th>Descrição</th><th>Marca</th><th>Qtd</th><th>Validade</th><th>Lote</th><th>Valor</th></tr></thead><tbody>
@@ -1043,7 +1045,7 @@ async function openFichaPJPatrimonio(osId) {
         <div class="modal-body">
             <p class="subtitulo">OS ${d.os_id} • aberto por ${esc(d.status_novo)}</p>
             <table class="info-table">
-                ${[['Código do Cliente',cab.codigo],['Razão',cab.razao],['Nº OS Manutenção',cab.numero_os_manutencao]].map(([l,v]) => `<tr><td>${l}</td><td>${esc(v||'-')}</td></tr>`).join('')}
+                ${[['Código do Cliente',cab.codigo],['Razão',cab.razao],['Nº OS Manutenção',cab.numero_os_manutencao],['Motivo',cab.motivo],['Justificativa',cab.justificativa]].map(([l,v]) => `<tr><td>${l}</td><td>${esc(v||'-')}</td></tr>`).join('')}
             </table>
             <div class="section-title">Produtos</div>
             <div class="tabela-container"><table><thead><tr><th>ID</th><th>Descrição</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>
@@ -1081,7 +1083,7 @@ async function openFormularioQualidade(osId, tipo) {
                 ${renderMidiasHTML(d.midias)}
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Gerar PDF</button>
+                <button class="btn btn-secondary" onclick="gerarPDFFFichaPF(${d.os_id})">Gerar PDF</button>
                 <button class="btn btn-primary" id="btn-abrir-inv-pf">Abrir Investigação</button>
             </div>`);
         document.getElementById('btn-abrir-inv-pf').addEventListener('click', async () => {
@@ -1109,7 +1111,7 @@ async function openFormularioQualidade(osId, tipo) {
                 ${renderMidiasHTML(d.midias)}
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Gerar PDF</button>
+                <button class="btn btn-secondary" onclick="gerarPDFFFichaPJQ(${d.os_id})">Gerar PDF</button>
                 <button class="btn btn-primary" id="btn-abrir-inv-pj">Abrir Investigação</button>
             </div>`);
         document.getElementById('btn-abrir-inv-pj').addEventListener('click', async () => {
@@ -1138,7 +1140,7 @@ async function openInvestigacao(osId, tipo) {
                 <div class="form-group full"><label>Resolução e Resposta*</label><textarea id="inv-resolucao">${esc(ch.Resolucao_Resposta||'')}</textarea></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Gerar PDF</button>
+                <button class="btn btn-secondary" onclick="gerarPDFFFichaPF(${d.os_id})">Gerar PDF</button>
                 <button class="btn btn-danger" id="btn-inv-reprovar">Reprovar</button>
                 <button class="btn btn-success" id="btn-inv-aprovar">Aprovar</button>
             </div>`);
@@ -1182,7 +1184,7 @@ async function openInvestigacao(osId, tipo) {
                 <div class="form-group full"><label>Resolução e Resposta*</label><textarea id="inv-resolucao-pj">${esc(ch.Resolucao_Resposta||'')}</textarea></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Gerar PDF</button>
+                <button class="btn btn-secondary" onclick="gerarPDFFFichaPJQ(${d.os_id})">Gerar PDF</button>
                 <button class="btn btn-danger" id="btn-inv-pj-reprovar">Reprovar</button>
                 <button class="btn btn-success" id="btn-inv-pj-aprovar">Aprovar</button>
             </div>`);
@@ -1227,7 +1229,7 @@ async function openFormularioPatrimonio(osId) {
             <div class="form-group full"><label>Motivo* (até 300 caracteres)</label><textarea id="pat-motivo" maxlength="300">${esc(cab.motivo||'')}</textarea></div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal()">Gerar PDF</button>
+            <button class="btn btn-secondary" onclick="gerarPDFFFichaPJP(${d.os_id})">Gerar PDF</button>
             <button class="btn btn-danger" id="btn-pat-reprovar">Reprovar</button>
             <button class="btn btn-success" id="btn-pat-aprovar">Aprovar</button>
         </div>`);
@@ -1268,7 +1270,7 @@ async function openAnaliseComercialPJ(osId) {
             <div class="form-group full"><label>Justificativa*</label><textarea id="com-just-pj">${esc(ch.Justificativa||'')}</textarea></div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal()">Gerar PDF</button>
+            <button class="btn btn-secondary" onclick="gerarPDFFFichaPJQ(${d.os_id})">Gerar PDF</button>
             <button class="btn btn-danger" id="btn-com-pj-reprovar">Reprovar (Finalizar)</button>
             <button class="btn btn-success" id="btn-com-pj-aprovar">Aprovar</button>
         </div>`);
@@ -1312,7 +1314,7 @@ async function openAnaliseComercialPatrimonio(osId) {
             <div class="form-group full"><label>Justificativa*</label><textarea id="com-just-pat">${esc(cab.justificativa||'')}</textarea></div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal()">Gerar PDF</button>
+            <button class="btn btn-secondary" onclick="gerarPDFFFichaPJP(${d.os_id})">Gerar PDF</button>
             <button class="btn btn-danger" id="btn-com-pat-reprovar">Reprovar (Finalizar)</button>
             <button class="btn btn-success" id="btn-com-pat-aprovar">Aprovar</button>
         </div>`);
@@ -1617,17 +1619,130 @@ function openFicha(osId, tipo) {
 // Helpers de renderização
 // ============================================================
 
+// ---- Lightbox de Mídia ----
+let lbFotos = [];
+let lbIdx = 0;
+let lbZoomAtivo = false;
+let lbZoomScale = 1;
+const LB_ZOOM_MIN = 1, LB_ZOOM_MAX = 5, LB_ZOOM_STEP = 0.4;
+
+function initLightbox() {
+    if (document.getElementById('lightbox')) return;
+    const lb = document.createElement('div');
+    lb.id = 'lightbox';
+    lb.className = 'lightbox';
+    lb.onclick = (e) => { if (e.target === lb) fecharLb(); };
+    lb.innerHTML = `
+        <button class="lb-close" onclick="fecharLb()" title="Fechar (Esc)">✕</button>
+        <button class="lb-nav lb-prev" onclick="navLb(-1);event.stopPropagation()" title="Anterior (←)">‹</button>
+        <div class="lb-img-wrap" id="lb-wrap" onclick="toggleZoomLb(event)">
+            <img id="lb-img" src="" alt="">
+        </div>
+        <div class="lb-caption" id="lb-caption"></div>
+        <div class="lb-counter" id="lb-counter"></div>
+        <div class="lb-toolbar">
+            <button class="lb-btn" onclick="toggleZoomLb(event)" id="btn-zoom" title="Clique na imagem ou scroll para zoom">
+                🔍 <span id="zoom-label">Ampliar</span>
+            </button>
+            <a class="lb-btn" id="btn-nova-aba" href="#" target="blank" onclick="event.stopPropagation()" title="Abrir em nova aba">
+                🔗 Nova aba
+            </a>
+            <span class="lb-zoom-hint">Scroll do mouse também aplica zoom</span>
+        </div>
+        <button class="lb-nav lb-next" onclick="navLb(1);event.stopPropagation()" title="Próxima (→)">›</button>
+    `;
+    document.body.appendChild(lb);
+
+    // Scroll zoom
+    document.getElementById('lb-wrap').addEventListener('wheel', e => {
+        e.preventDefault(); e.stopPropagation();
+        lbZoomScale += e.deltaY < 0 ? LB_ZOOM_STEP : -LB_ZOOM_STEP;
+        lbZoomScale = Math.min(Math.max(lbZoomScale, LB_ZOOM_MIN), LB_ZOOM_MAX);
+        aplicarZoomLb();
+    }, { passive: false });
+
+    // Teclado
+    document.addEventListener('keydown', e => {
+        const lb = document.getElementById('lightbox');
+        if (!lb || !lb.classList.contains('open')) return;
+        if (e.key === 'Escape') fecharLb();
+        if (e.key === 'ArrowLeft') navLb(-1);
+        if (e.key === 'ArrowRight') navLb(1);
+        if (e.key === '+' || e.key === '=') { lbZoomScale = Math.min(lbZoomScale + LB_ZOOM_STEP, LB_ZOOM_MAX); aplicarZoomLb(); }
+        if (e.key === '-') { lbZoomScale = Math.max(lbZoomScale - LB_ZOOM_STEP, LB_ZOOM_MIN); aplicarZoomLb(); }
+        if (e.key === '0') resetZoomLb();
+    });
+}
+
+function abrirLightbox(idx) {
+    lbIdx = idx;
+    resetZoomLb();
+    atualizarLb();
+    document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function fecharLb() {
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+    resetZoomLb();
+}
+function navLb(dir) {
+    lbIdx = (lbIdx + dir + lbFotos.length) % lbFotos.length;
+    resetZoomLb();
+    atualizarLb();
+}
+function atualizarLb() {
+    const f = lbFotos[lbIdx];
+    const img = document.getElementById('lb-img');
+    img.src = f.src;
+    document.getElementById('lb-caption').textContent = f.nome;
+    document.getElementById('lb-counter').textContent = `${lbIdx + 1} / ${lbFotos.length}`;
+    document.getElementById('btn-nova-aba').href = f.src;
+}
+function aplicarZoomLb() {
+    const img = document.getElementById('lb-img');
+    const wrap = document.getElementById('lb-wrap');
+    img.style.transform = `scale(${lbZoomScale})`;
+    lbZoomAtivo = lbZoomScale > 1;
+    wrap.classList.toggle('zoomed', lbZoomAtivo);
+    document.getElementById('zoom-label').textContent = lbZoomAtivo ? 'Reduzir' : 'Ampliar';
+}
+function toggleZoomLb(e) {
+    e.stopPropagation();
+    if (lbZoomAtivo) resetZoomLb();
+    else { lbZoomScale = 2.5; aplicarZoomLb(); }
+}
+function resetZoomLb() { lbZoomScale = 1; aplicarZoomLb(); }
+
 function renderMidiasHTML(midias) {
     if (!midias || midias.length === 0) return '<p class="subtitulo">Nenhuma mídia registrada.</p>';
-    const items = midias.map(m => {
+    const extImg = ['png','jpg','jpeg','bmp','gif','webp'];
+    const extVid = ['mp4','avi','mov','mkv','wmv','flv','webm'];
+    const fotosParaLightbox = [];
+    const items = midias.map((m, i) => {
         const ext = (m.nome || '').split('.').pop().toLowerCase();
-        const isImg = ['png','jpg','jpeg','bmp','gif','webp'].includes(ext);
-        if (isImg && m.localizacao) {
-            return `<div class="midia-item" title="${esc(m.nome||'')}"><img src="/api/midia/${encodeURIComponent(m.localizacao)}" alt="${esc(m.nome||'')}" onerror="this.parentElement.innerHTML='📷'"><div class="midia-nome">${esc(m.nome||'')}</div></div>`;
+        const isImg = extImg.includes(ext);
+        const isVid = extVid.includes(ext);
+        const url = m.localizacao ? `/api/midia/${encodeURIComponent(m.localizacao)}` : '';
+        if (isImg && url) {
+            fotosParaLightbox.push({ src: url, nome: m.nome || '' });
+            const lbIdx = fotosParaLightbox.length - 1;
+            return `<div class="midia-item" title="${esc(m.nome||'')}" onclick="abrirLightbox(${lbIdx})"><img src="${url}" alt="${esc(m.nome||'')}" onerror="this.parentElement.classList.add('unavailable');this.alt='❌'" loading="lazy"><div class="midia-nome">${esc(m.nome||'')}</div></div>`;
         }
-        return `<div class="midia-item" title="${esc(m.nome||'')}">🎬<div class="midia-nome">${esc(m.nome||'')}</div></div>`;
+        if (isVid && url) {
+            return `<div class="midia-item video-item" title="${esc(m.nome||'')}" onclick="window.open('${url}','_blank')"><div class="midia-nome">${esc(m.nome||'')}</div></div>`;
+        }
+        return `<div class="midia-item unavailable" title="${esc(m.nome||'')} – arquivo não encontrado">📷<div class="midia-nome">${esc(m.nome||'')}</div></div>`;
     }).join('');
-    return `<div class="section-title">Mídias registradas</div><div class="midia-grid">${items}</div>`;
+    // Inicializa lightbox e atualiza array de fotos
+    initLightbox();
+    lbFotos = fotosParaLightbox;
+    const disponiveis = fotosParaLightbox.length;
+    const total = midias.length;
+    const badge = disponiveis < total
+        ? `<span class="badge" style="background:#e74c3c;margin-left:.5rem">${disponiveis}/${total} disponíveis</span>`
+        : `<span class="badge badge-novo" style="margin-left:.5rem">${total} foto(s)</span>`;
+    return `<div class="section-title">Mídias registradas ${badge}</div><div class="midia-grid">${items}</div>`;
 }
 
 function renderPagamentosHTML(pagamentos) {
@@ -1684,16 +1799,23 @@ async function gerarPDF(titulo, osId, campos, tabela, observacoes) {
     if (tabela) body.tabela = tabela;
     if (observacoes) body.observacoes = observacoes;
     try {
-        const resp = await api('/api/pdf/gerar', { method: 'POST', body });
-        // Decodifica base64 e faz download
-        const bytes = atob(resp.pdf_base64);
-        const arr = new Uint8Array(bytes.length);
-        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-        const blob = new Blob([arr], { type: 'application/pdf' });
+        toast('Gerando PDF...', 'info');
+        // Tenta download direto primeiro (mais confiável)
+        const resp = await fetch('/api/pdf/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(body),
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.erro || `Erro ${resp.status}`);
+        }
+        const blob = await resp.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = resp.filename || `OS_${osId}.pdf`;
+        a.download = `OS_${osId}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1709,22 +1831,27 @@ async function gerarPDFFFichaPF(osId) {
     const ch = d.chamado || {};
     const campos = [
         ['Nome', ch.nome], ['E-mail', ch.email], ['CPF', ch.cpf],
-        ['Celular', ch.celular], ['Motivo', ch.motivo], ['Cidade', ch.cidade],
-        ['Estado', ch.estado], ['Marca', ch.marca], ['Nome do Produto', ch.nome_produto],
+        ['Celular', ch.celular], ['Motivo', ch.motivo],
+        ['Cidade', ch.cidade], ['Estado', ch.estado],
+        ['Marca', ch.marca], ['Nome do Produto', ch.nome_produto],
+        ['Quantidade', ch.quantidade], ['Validade', ch.validade],
         ['Lote', ch.lote], ['Problema', ch.problema], ['Local de compra', ch.local],
-        ['Análise', ch.Analise], ['Resolução e Resposta', ch.Resolucao_Resposta],
     ];
-    let tabela = null;
+    const tabela = null;
+    const observacoes = [
+        ['Aberto por', d.status_novo],
+        ['Análise', ch.Analise],
+        ['Resolução e Resposta', ch.Resolucao_Resposta],
+        ['Decisão Qualidade', d.decisao_qualidade],
+        ['Finalizado por', d.status_finalizado],
+    ];
     if (d.pagamentos && d.pagamentos.length) {
-        tabela = {
-            cabecalhos: ['Código Produto', 'Valor', 'Data Pagamento', 'Código Pagamento', 'Sistema', 'Observação'],
-            linhas: d.pagamentos.map(p => [
-                String(p.id_produto || ''), String(p.valor || ''), String(p.data_pg || ''),
-                p.codigo_sistema || '', p.sistema || '', p.observacao || '',
-            ]),
-        };
+        observacoes.push(['Pagamentos', '']);
+        d.pagamentos.forEach((p, i) => {
+            observacoes.push([`Produto ${p.id_produto || i+1}`, `R$ ${p.valor || '0.00'} • ${p.data_pg || '-'} • ${p.sistema || '-'} • ${p.observacao || '-'}`]);
+        });
     }
-    await gerarPDF('Ficha - Pessoa Física', osId, campos, tabela);
+    await gerarPDF('Ficha - Pessoa Física', osId, campos, tabela, observacoes);
 }
 
 async function gerarPDFFFichaPJQ(osId) {
@@ -1733,20 +1860,29 @@ async function gerarPDFFFichaPJQ(osId) {
     const osRow = d.os_row || {};
     const val0 = d.pagamentos?.[0] || {};
     const campos = [
-        ['Nome', ch.Nome], ['Código do Cliente', osRow.Codigo], ['Razão', ch.razao],
-        ['Motivo', ch.Motivo], ['Problema', ch.Problema],
-        ['Análise', ch['Analise Qualidade']], ['Resolução e Resposta', ch.Resolucao_Resposta],
-        ['Justificativa', ch.Justificativa],
+        ['Nome', ch.Nome], ['Celular', ch.Celular],
+        ['Código do Cliente', osRow.Codigo], ['Razão', ch.razao],
+        ['CPF/CNPJ', ch.cnpj_cpf], ['Motivo', ch.Motivo],
+        ['Problema', ch.Problema],
     ];
     const tabela = {
         cabecalhos: ['Descrição', 'Marca', 'Quantidade', 'Validade', 'Lote', 'Valor'],
         linhas: [[
             ch.produto_descricao || '', ch.produto_marca || '',
             String(ch.Quantidade || ''), String(ch.Validade || ''),
-            ch.Lote || '', String(val0.valor || ''),
+            ch.Lote || '', String(val0.valor || 'R$ 0.00'),
         ]],
     };
-    await gerarPDF('Ficha - PJ Qualidade', osId, campos, tabela);
+    const observacoes = [
+        ['Aberto por', d.status_novo],
+        ['Análise (Qualidade)', ch['Analise Qualidade']],
+        ['Resolução e Resposta', ch.Resolucao_Resposta],
+        ['Decisão Qualidade', d.decisao_qualidade],
+        ['Justificativa', ch.Justificativa],
+        ['Decisão Comercial', d.decisao_comercial],
+        ['Finalizado por', d.status_finalizado],
+    ];
+    await gerarPDF('Ficha - PJ Qualidade', osId, campos, tabela, observacoes);
 }
 
 async function gerarPDFFFichaPJP(osId) {
@@ -1760,13 +1896,20 @@ async function gerarPDFFFichaPJP(osId) {
         ['Motivo', cab.motivo], ['Justificativa', cab.justificativa],
     ];
     const tabela = {
-        cabecalhos: ['id_Produto', 'Descrição', 'Quantidade', 'Valor'],
+        cabecalhos: ['ID Produto', 'Descrição', 'Marca', 'Quantidade', 'Valor'],
         linhas: (d.produtos || []).map(p => [
             String(p.id_Produto || ''), p.produto_descricao || '',
-            String(p.Quantidade || ''), String(valMap[p.id_Produto] || ''),
+            p.produto_marca || '', String(p.Quantidade || ''),
+            String(valMap[p.id_Produto] ? `R$ ${valMap[p.id_Produto]}` : '-'),
         ]),
     };
-    await gerarPDF('Ficha - PJ Patrimônio', osId, campos, tabela);
+    const observacoes = [
+        ['Aberto por', d.status_novo],
+        ['Decisão Patrimônio', d.decisao_patrimonio],
+        ['Decisão Comercial', d.decisao_comercial],
+        ['Finalizado por', d.status_finalizado],
+    ];
+    await gerarPDF('Ficha - PJ Patrimônio', osId, campos, tabela, observacoes);
 }
 
 

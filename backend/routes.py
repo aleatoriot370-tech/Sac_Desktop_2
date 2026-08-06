@@ -186,6 +186,8 @@ def api_criar_chamado_pf():
         "estado": request.form.get("estado", ""),
         "marca": request.form.get("marca", ""),
         "nome_produto": request.form.get("nome_produto", ""),
+        "quantidade": request.form.get("quantidade"),
+        "validade": request.form.get("validade"),
         "lote": request.form.get("lote", ""),
         "problema": request.form.get("problema", ""),
         "local": request.form.get("local", ""),
@@ -532,7 +534,13 @@ def api_buscar_valor_externo():
         # Garante conversão para inteiro
         codigo_cliente = int(codigo_cliente) if codigo_cliente is not None else None
         produto_codigo = int(produto_codigo) if produto_codigo is not None else None
-        return jsonify(services.buscar_valor_externo(codigo_cliente, produto_codigo))
+        resultado = services.buscar_valor_externo(codigo_cliente, produto_codigo)
+        # Se o service retornou um erro, propaga o status code adequado
+        if resultado.get("erro"):
+            return jsonify(resultado), 400
+        return jsonify(resultado)
+    except (TypeError, ValueError) as exc:
+        return jsonify({"erro": f"Parâmetros inválidos: {exc}"}), 400
     except Exception as exc:
         return jsonify({"erro": str(exc)}), 500
 
@@ -700,15 +708,32 @@ def api_servir_midia(filepath):
     """Serve um arquivo de mídia do sistema de arquivos local."""
     import os
     import mimetypes
+    from config import Config
 
     # Tenta o caminho direto primeiro
-    if not os.path.exists(filepath):
+    if os.path.exists(filepath):
+        pass  # Encontrou
+    else:
         # Tenta com barras invertidas (caminhos Windows salvos com \\\)
         alt = filepath.replace("/", "\\\\")
         if os.path.exists(alt):
             filepath = alt
         else:
-            return jsonify({"erro": "Arquivo não encontrado."}), 404
+            # Tenta normalizar barras
+            alt2 = filepath.replace("\\\\", "/").replace("\\", "/")
+            if os.path.exists(alt2):
+                filepath = alt2
+            else:
+                # Tenta procurar no MEDIA_PATH
+                nome_arquivo = os.path.basename(filepath)
+                if nome_arquivo and Config.MEDIA_PATH:
+                    candidato = os.path.join(Config.MEDIA_PATH, nome_arquivo)
+                    if os.path.exists(candidato):
+                        filepath = candidato
+                    else:
+                        return jsonify({"erro": f"Arquivo não encontrado: {filepath}"}), 404
+                else:
+                    return jsonify({"erro": f"Arquivo não encontrado: {filepath}"}), 404
 
     mime, _ = mimetypes.guess_type(filepath)
     mime = mime or "application/octet-stream"
@@ -722,6 +747,7 @@ def api_servir_midia(filepath):
 @login_required
 def api_gerar_pdf():
     """Gera um PDF e retorna como base64 para download no frontend."""
+    import tempfile
     dados = _json()
     titulo = dados.get("titulo", "Relatório")
     os_id = dados.get("os_id", 0)
@@ -737,16 +763,63 @@ def api_gerar_pdf():
     if observacoes:
         obs_tuple = [(o[0], o[1]) for o in observacoes]
 
+    # Usa diretório temporário do sistema (funciona em Windows e Linux)
+    tmp_dir = Path(tempfile.gettempdir())
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = tmp_dir / f"sac_pdf_{os_id}.pdf"
+
     try:
-        buffer = BytesIO()
         gerar_pdf_ficha(
-            Path(f"/tmp/sac_pdf_{os_id}.pdf"), titulo, os_id, campos,
+            pdf_path, titulo, os_id, campos,
             tabela=tabela_tuple, observacoes=obs_tuple,
         )
-        # Lê o arquivo gerado
-        with open(f"/tmp/sac_pdf_{os_id}.pdf", "rb") as f:
+        if not pdf_path.exists():
+            return jsonify({"erro": "PDF não foi gerado (arquivo não encontrado)."}), 500
+        with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
         pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
         return jsonify({"pdf_base64": pdf_b64, "filename": f"OS_{os_id}.pdf"})
+    except Exception as exc:
+        return jsonify({"erro": str(exc)}), 500
+
+
+@bp.route("/pdf/download", methods=["POST"])
+@login_required
+def api_download_pdf():
+    """Gera um PDF e retorna como arquivo para download direto (mais confiável)."""
+    import tempfile
+    from flask import send_file
+    dados = _json()
+    titulo = dados.get("titulo", "Relatório")
+    os_id = dados.get("os_id", 0)
+    campos = dados.get("campos", [])
+    tabela = dados.get("tabela")
+    observacoes = dados.get("observacoes")
+
+    tabela_tuple = None
+    if tabela and tabela.get("cabecalhos") and tabela.get("linhas"):
+        tabela_tuple = (tabela["cabecalhos"], tabela["linhas"])
+
+    obs_tuple = None
+    if observacoes:
+        obs_tuple = [(o[0], o[1]) for o in observacoes]
+
+    tmp_dir = Path(tempfile.gettempdir())
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = tmp_dir / f"sac_pdf_{os_id}.pdf"
+
+    try:
+        gerar_pdf_ficha(
+            pdf_path, titulo, os_id, campos,
+            tabela=tabela_tuple, observacoes=obs_tuple,
+        )
+        if not pdf_path.exists():
+            return jsonify({"erro": "PDF não foi gerado."}), 500
+        return send_file(
+            pdf_path,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"OS_{os_id}.pdf",
+        )
     except Exception as exc:
         return jsonify({"erro": str(exc)}), 500

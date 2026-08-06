@@ -225,10 +225,11 @@ def salvar_chamado_pf(dados: dict, arquivos: list, id_user: int) -> dict:
     # Validação
     obrigatorios = [
         "nome", "email", "cpf", "celular", "motivo", "cidade", "estado",
-        "marca", "nome_produto", "lote", "problema", "local",
+        "marca", "nome_produto", "quantidade", "validade", "lote", "problema", "local",
     ]
     for campo in obrigatorios:
-        if not dados.get(campo, "").strip():
+        valor = dados.get(campo)
+        if valor is None or (isinstance(valor, str) and not valor.strip()):
             return {"erro": f"O campo '{campo}' é obrigatório."}
 
     if not dados["cpf"].strip().isdigit():
@@ -237,6 +238,12 @@ def salvar_chamado_pf(dados: dict, arquivos: list, id_user: int) -> dict:
         return {"erro": "Celular deve conter apenas números."}
     if len(dados["motivo"]) > 300:
         return {"erro": "Motivo deve ter no máximo 300 caracteres."}
+
+    # Converte quantidade para inteiro
+    try:
+        dados["quantidade"] = int(dados["quantidade"])
+    except (TypeError, ValueError):
+        return {"erro": "Quantidade deve ser um número inteiro."}
 
     # Cria OS + Sac_PF + Status
     resultado = db.criar_chamado_pf(dados, id_user)

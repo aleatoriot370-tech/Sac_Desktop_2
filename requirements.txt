@@ -1,8 +1,8 @@
-# SAC - Grupo Lamoia (Flask + PyWebView)
+# SAC - Grupo Lamoia (Flask Web Application)
 Flask>=3.0
-pywebview>=5.0
 supabase>=2.4
 psycopg2-binary>=2.9
 bcrypt>=4.1
 python-dotenv>=1.0
 reportlab>=4.0
+gunicorn>=21.0

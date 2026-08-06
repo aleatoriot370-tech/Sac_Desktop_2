@@ -70,6 +70,9 @@ class Config:
         "MEDIA_STAGING_PATH", r"G:\Meu Drive\Sistema Sac\Midia"
     )
 
+    # --- Flask ---
+    SECRET_KEY = _get("SECRET_KEY", "sac-grupo-lamoia-dev")
+
     APP_NAME = "SAC - Grupo Lamoia"
     ASSETS_DIR = Path(__file__).parent / "assets"
     LOGO_PATH = ASSETS_DIR / "logo.png"
